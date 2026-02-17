@@ -11,6 +11,9 @@ public class AnalyseurLexical {
     public static int NUM_LIGNE;
     public static String[] TABLE_MOTS_RESERVES = new String[Constantes.NB_MOTS_RESERVES];
 
+    public static TUnilex UNILEX;
+
+
     public static void ERREUR(int numErreur) {
         String message;
 
@@ -41,22 +44,7 @@ public class AnalyseurLexical {
             ERREUR(1);
         }
     }
-
-    /*
-     * public static void LIRE_CAR() {
-     * try {
-     * CARLU = SOURCE.read();
-     * if (CARLU == -1) {
-     * ERREUR(1);
-     * }
-     * if (CARLU == '\n') {
-     * NUM_LIGNE++;
-     * }
-     * } catch (IOException e) {
-     * ERREUR(1);
-     * }
-     * }
-     */     
+   
 
     public static void SAUTER_SEPARETEURS() {
         boolean encore = true;
@@ -105,7 +93,6 @@ public class AnalyseurLexical {
 
         StringBuilder chaine = new StringBuilder();
 
-        // On est sur l'apostrophe ouvrante
         LIRE_CAR();
 
         while (CARLU != -1) {
@@ -113,12 +100,10 @@ public class AnalyseurLexical {
             if (CARLU == '\'') {
                 LIRE_CAR();
 
-                // Apostrophe doublée -> apostrophe dans la chaîne
                 if (CARLU == '\'') {
                     chaine.append('\'');
                     LIRE_CAR();
                 } else {
-                    // Fin de la chaîne
                     CHAINE = chaine.toString();
                     return TUnilex.CH;
                 }
@@ -126,16 +111,15 @@ public class AnalyseurLexical {
                 chaine.append((char) CARLU);
 
                 if (chaine.length() > Constantes.LONG_MAX_CHAINE) {
-                    ERREUR(3); // chaîne trop longue
-                }
+                    ERREUR(3); 
 
                 LIRE_CAR();
+                }
             }
         }
 
-        // Fin de fichier atteinte sans apostrophe fermante
         ERREUR(1);
-        return null; // jamais atteint
+        return null;
     }
 
     private static boolean EST_UN_MOT_RESERVE(String ident) {
@@ -268,7 +252,8 @@ public class AnalyseurLexical {
             return RECO_IDENT_OU_MOT_RESERVE();
         }
 
-        return RECO_SYMB();
+        UNILEX = RECO_SYMB();
+        return UNILEX;
     }
 
     public static void INITIALISER(String nomFichier) {
