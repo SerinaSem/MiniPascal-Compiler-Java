@@ -328,4 +328,16 @@ public class AnalyseurSyntaxique {
         return false;
     }
 
+    public static void ANASYNT() {
+
+        UNILEX = AnalyseurLexical.ANALEX();
+
+        if (PROG()) {
+            System.out.println("Le programme source est syntaxiquement correct");
+        } else {
+            System.out.println("Erreur syntaxique");
+            System.exit(3);
+        }
+    }
+
 }
