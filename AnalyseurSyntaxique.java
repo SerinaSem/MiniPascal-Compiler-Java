@@ -7,6 +7,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean PROG() {
+        System.out.println("PROG");
 
         if (UNILEX == TUnilex.MOTCLE &&
                 AnalyseurLexical.CHAINE.equals("PROGRAMME")) {
@@ -41,6 +42,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean DECL_CONST() {
+        System.out.println("DECL_CONST");
 
         if (UNILEX == TUnilex.MOTCLE &&
                 AnalyseurLexical.CHAINE.equals("CONST")) {
@@ -78,6 +80,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean DECL_VAR() {
+        System.out.println("DECL_VAR");
 
         if (UNILEX == TUnilex.MOTCLE &&
                 AnalyseurLexical.CHAINE.equals("VAR")) {
@@ -112,6 +115,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean BLOC() {
+        System.out.println("BLOC");
 
         if (UNILEX == TUnilex.MOTCLE &&
                 AnalyseurLexical.CHAINE.equals("DEBUT")) {
@@ -142,6 +146,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean INSTRUCTION() {
+        System.out.println("INSTRUCTION");
 
         if (AFFECTATION())
             return true;
@@ -156,6 +161,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean AFFECTATION() {
+        System.out.println("AFFECTATION");
 
         if (UNILEX == TUnilex.IDENT) {
 
@@ -175,6 +181,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean LECTURE() {
+        System.out.println("LECTURE");
 
         if (UNILEX == TUnilex.MOTCLE &&
                 AnalyseurLexical.CHAINE.equals("LIRE")) {
@@ -212,6 +219,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean ECRITURE() {
+        System.out.println("ECRITURE");
 
         if (UNILEX == TUnilex.MOTCLE &&
                 AnalyseurLexical.CHAINE.equals("ECRIRE")) {
@@ -245,6 +253,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean ECR_EXP() {
+        System.out.println("ECR_EXP");
 
         if (UNILEX == TUnilex.CH) {
             UNILEX = AnalyseurLexical.ANALEX();
@@ -255,6 +264,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean EXP() {
+        System.out.println("EXP");
 
         if (TERME()) {
             return SUITE_TERME();
@@ -264,6 +274,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean SUITE_TERME() {
+        System.out.println("SUITE_TERME");
 
         if (UNILEX == TUnilex.PLUS ||
                 UNILEX == TUnilex.MOINS ||
@@ -282,6 +293,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean TERME() {
+        System.out.println("TERME");
 
         if (UNILEX == TUnilex.ENT ||
                 UNILEX == TUnilex.IDENT) {
@@ -315,6 +327,7 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean OP_BIN() {
+        System.out.println("OP_BIN");
 
         if (UNILEX == TUnilex.PLUS ||
                 UNILEX == TUnilex.MOINS ||
@@ -330,11 +343,16 @@ public class AnalyseurSyntaxique {
 
     public static void ANASYNT() {
 
+        // Lire la première unité lexicale
         UNILEX = AnalyseurLexical.ANALEX();
 
-        if (PROG()) {
+        // Vérifier la grammaire
+        if (PROG() && AnalyseurLexical.CARLU == '\0') {
+
             System.out.println("Le programme source est syntaxiquement correct");
+
         } else {
+
             System.out.println("Erreur syntaxique");
             System.exit(3);
         }

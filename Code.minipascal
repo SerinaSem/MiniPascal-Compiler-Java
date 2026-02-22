@@ -1,13 +1,13 @@
 PROGRAMME myApp;
 CONST
-    x = 'a',
+    x ='a';
     b = 2;
 VAR
-    z, 2t;
+    z, t;
 DEBUT
-{this is { a comment}} 
-   ECRIRE('Type a number: ');
-   LIRE(t);
-   z := t * b * 2;
-   ECRIRE('Your n''umber multiplied by 4 is: ', z)
+    {this is { a comment}} 
+    ECRIRE('Type a number: ');
+    LIRE(t);
+    z := t * b * 2;
+    ECRIRE('Your n''umber multiplied by 4 is: ', z)
 FIN.

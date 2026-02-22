@@ -1,6 +1,28 @@
 public class Main {
 
+
+
     public static void main(String[] args) {
+
+        if (args.length == 0) {
+            System.out.println("Nom du fichier manquant");
+            return;
+        }
+
+        AnalyseurLexical.INITIALISER(args[0]);
+        AnalyseurSyntaxique.ANASYNT();
+        AnalyseurLexical.TERMINER();
+    }
+
+    
+    
+    
+    
+    
+    
+    
+    
+    /*public static void main(String[] args) {
 
         AnalyseurLexical.INITIALISER(args[0]);
         TableIdentificateurs table = new TableIdentificateurs();
@@ -27,7 +49,7 @@ public class Main {
         AnalyseurLexical.TERMINER();
 
         table.AFFICHE_TABLE_IDENT();
-    }
+    }*/
 }
 
 

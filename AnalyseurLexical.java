@@ -13,7 +13,6 @@ public class AnalyseurLexical {
 
     public static TUnilex UNILEX;
 
-
     public static void ERREUR(int numErreur) {
         String message;
 
@@ -23,6 +22,7 @@ public class AnalyseurLexical {
             case 3 -> "chaine de caracteres trop longue";
             case 4 -> "identificateur trop long";
             case 5 -> "symbole inconnu";
+            case 6 -> "erreur syntaxique";
             default -> "erreur lexicale inconnue";
         };
 
@@ -44,7 +44,6 @@ public class AnalyseurLexical {
             ERREUR(1);
         }
     }
-   
 
     public static void SAUTER_SEPARETEURS() {
         boolean encore = true;
@@ -93,33 +92,41 @@ public class AnalyseurLexical {
 
         StringBuilder chaine = new StringBuilder();
 
+        // On est sur l'apostrophe ouvrante
         LIRE_CAR();
 
-        while (CARLU != -1) {
+        while (true) {
 
+            // Si fin de fichier
+            if (CARLU == '\0') {
+                ERREUR(1);
+            }
+
+            // Si apostrophe
             if (CARLU == '\'') {
+
                 LIRE_CAR();
 
+                // Apostrophe doublée → '
                 if (CARLU == '\'') {
                     chaine.append('\'');
                     LIRE_CAR();
                 } else {
+                    // FIN NORMALE DE CHAINE
                     CHAINE = chaine.toString();
                     return TUnilex.CH;
                 }
             } else {
+
                 chaine.append((char) CARLU);
 
                 if (chaine.length() > Constantes.LONG_MAX_CHAINE) {
-                    ERREUR(3); 
+                    ERREUR(3);
+                }
 
                 LIRE_CAR();
-                }
             }
         }
-
-        ERREUR(1);
-        return null;
     }
 
     private static boolean EST_UN_MOT_RESERVE(String ident) {
