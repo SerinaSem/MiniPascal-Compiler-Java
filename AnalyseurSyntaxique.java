@@ -129,6 +129,7 @@ public class AnalyseurSyntaxique {
                     UNILEX = AnalyseurLexical.ANALEX();
 
                     if (!INSTRUCTION()) {
+                        System.out.println("pas d'instruction apres le point virgule");
                         return false;
                     }
                 }
@@ -141,22 +142,30 @@ public class AnalyseurSyntaxique {
                 }
             }
         }
-
+        System.out.println("BLOC: erreur de syntaxe");
         return false;
     }
 
     public static boolean INSTRUCTION() {
+
         System.out.println("INSTRUCTION");
 
-        if (AFFECTATION())
-            return true;
-        if (LECTURE())
-            return true;
-        if (ECRITURE())
-            return true;
-        if (BLOC())
-            return true;
+        if (UNILEX == TUnilex.IDENT)
+            return AFFECTATION();
 
+        if (UNILEX == TUnilex.MOTCLE &&
+                AnalyseurLexical.CHAINE.equals("LIRE"))
+            return LECTURE();
+
+        if (UNILEX == TUnilex.MOTCLE &&
+                AnalyseurLexical.CHAINE.equals("ECRIRE"))
+            return ECRITURE();
+
+        if (UNILEX == TUnilex.MOTCLE &&
+                AnalyseurLexical.CHAINE.equals("DEBUT"))
+            return BLOC();
+        
+        System.out.println("INSTRUCTION: erreur de syntaxe");
         return false;
     }
 
@@ -347,13 +356,15 @@ public class AnalyseurSyntaxique {
         UNILEX = AnalyseurLexical.ANALEX();
 
         // Vérifier la grammaire
-        if (PROG() && AnalyseurLexical.CARLU == '\0') {
+        if (PROG()) {
 
             System.out.println("Le programme source est syntaxiquement correct");
 
         } else {
-
             System.out.println("Erreur syntaxique");
+            System.out.println("Unilex: " + UNILEX);
+            System.out.println("CHAINE: " + AnalyseurLexical.CHAINE);
+            System.out.println("CARLU: " + AnalyseurLexical.CARLU);
             System.exit(3);
         }
     }
