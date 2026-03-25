@@ -1,0 +1,6 @@
+PROGRAMME test;
+CONST
+    x = 5;
+DEBUT
+    x := 10
+FIN.

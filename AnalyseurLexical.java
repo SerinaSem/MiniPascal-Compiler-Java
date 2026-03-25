@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -17,13 +18,18 @@ public class AnalyseurLexical {
         String message;
 
         message = switch (numErreur) {
-            case 1 -> "fin de fichier atteinte";
-            case 2 -> "nombre entier trop grand";
-            case 3 -> "chaine de caracteres trop longue";
-            case 4 -> "identificateur trop long";
-            case 5 -> "symbole inconnu";
-            case 6 -> "erreur syntaxique";
-            default -> "erreur lexicale inconnue";
+            case 1 ->
+                "fin de fichier atteinte";
+            case 2 ->
+                "nombre entier trop grand";
+            case 3 ->
+                "erreur syntaxique";
+            case 4 ->
+                "identificateur trop long";
+            case 5 ->
+                "symbole inconnu";
+            default ->
+                "erreur lexicale inconnue";
         };
 
         System.err.println("Erreur ligne " + NUM_LIGNE + " : " + message);
@@ -56,9 +62,12 @@ public class AnalyseurLexical {
                 int niveauCommentaire = 1;
                 LIRE_CAR();
                 while (niveauCommentaire > 0) {
+                    if (CARLU == -1) {
+                        ERREUR(1); 
+                    }
                     if (CARLU == '{') {
-                        niveauCommentaire++;
-                    } else if (CARLU == '}') {
+                        niveauCommentaire++; 
+                    }else if (CARLU == '}') {
                         niveauCommentaire--;
                     }
                     LIRE_CAR();
@@ -92,27 +101,19 @@ public class AnalyseurLexical {
 
         StringBuilder chaine = new StringBuilder();
 
-        // On est sur l'apostrophe ouvrante
         LIRE_CAR();
 
         while (true) {
-
-            // Si fin de fichier
             if (CARLU == '\0') {
                 ERREUR(1);
             }
-
-            // Si apostrophe
             if (CARLU == '\'') {
 
                 LIRE_CAR();
-
-                // Apostrophe doublée → '
                 if (CARLU == '\'') {
                     chaine.append('\'');
                     LIRE_CAR();
                 } else {
-                    // FIN NORMALE DE CHAINE
                     CHAINE = chaine.toString();
                     return TUnilex.CH;
                 }
@@ -200,7 +201,6 @@ public class AnalyseurLexical {
                 LIRE_CAR();
                 yield TUnilex.EG;
             }
-            // symboles composés
             case '<' -> {
                 LIRE_CAR();
                 switch (CARLU) {
@@ -244,19 +244,22 @@ public class AnalyseurLexical {
         SAUTER_SEPARETEURS();
 
         if (CARLU == -1) {
-            throw new RuntimeException("EOF");
+            ERREUR(1);
         }
 
         if (Character.isDigit(CARLU)) {
-            return RECO_ENTIER();
+            UNILEX = RECO_ENTIER();
+            return UNILEX;
         }
 
         if (CARLU == '\'') {
-            return RECO_CHAINE();
+            UNILEX = RECO_CHAINE();
+            return UNILEX;
         }
 
         if (Character.isLetter(CARLU)) {
-            return RECO_IDENT_OU_MOT_RESERVE();
+            UNILEX = RECO_IDENT_OU_MOT_RESERVE();
+            return UNILEX;
         }
 
         UNILEX = RECO_SYMB();

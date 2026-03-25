@@ -1,0 +1,6 @@
+PROGRAMME test;
+VAR
+    x;
+DEBUT
+    y := 5;
+FIN.

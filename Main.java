@@ -12,6 +12,7 @@ public class Main {
         AnalyseurLexical.INITIALISER(args[0]);
         AnalyseurSyntaxique.ANASYNT();
         AnalyseurLexical.TERMINER();
+        System.out.println("Analyse syntaxique terminée avec succès !");
     }
 
     

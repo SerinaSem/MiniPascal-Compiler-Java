@@ -1,13 +1,16 @@
-public abstract class Identificateur {
-    protected String nom;
+public class Identificateur {
+
+    public String nom;
+    public GenreIdent typ;   // variable ou constante
+    public int typc;         // 0 = entier, 1 = chaine
+    public int val;          // valeur ou index
+    public int adresse;      // pour variable
 
     public Identificateur(String nom) {
         this.nom = nom;
     }
 
-    public String getNom() {
-        return nom;
+    public GenreIdent getGenre() {
+        return typ;
     }
-
-    public abstract String getGenre();
 }

@@ -1,26 +1,41 @@
+
 public class AnalyseurSyntaxique {
 
-    public static TUnilex UNILEX;
+    static TableIdentificateurs tableIdent = new TableIdentificateurs();
+
+    static int NB_CONST_CHAINE;
+    static String[] VAL_DE_CONST_CHAINE = new String[100];
+    static int DERNIERE_ADRESSE_VAR_GLOB;
+    static String MESSAGE_ERREUR;
+    static int[] PCODE = new int[1000];
+    static int CO = 0;
 
     public static void initialiser() {
-        UNILEX = AnalyseurLexical.ANALEX();
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+        NB_CONST_CHAINE = 0;
+        DERNIERE_ADRESSE_VAR_GLOB = -1;
+    }
+
+    public static void ERREUR() {
+        System.out.println("Ligne " + AnalyseurLexical.NUM_LIGNE + " : " + MESSAGE_ERREUR);
+        System.exit(3);
     }
 
     public static boolean PROG() {
         System.out.println("PROG");
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("PROGRAMME")) {
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("PROGRAMME")) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-            if (UNILEX == TUnilex.IDENT) {
+            if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
-                UNILEX = AnalyseurLexical.ANALEX();
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-                if (UNILEX == TUnilex.PTVIRG) {
+                if (AnalyseurLexical.UNILEX == TUnilex.PTVIRG) {
 
-                    UNILEX = AnalyseurLexical.ANALEX();
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
                     if (DECL_CONST()) {
 
@@ -28,7 +43,7 @@ public class AnalyseurSyntaxique {
 
                             if (BLOC()) {
 
-                                if (UNILEX == TUnilex.POINT) {
+                                if (AnalyseurLexical.UNILEX == TUnilex.POINT) {
                                     return true;
                                 }
                             }
@@ -42,107 +57,144 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean DECL_CONST() {
+
         System.out.println("DECL_CONST");
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("CONST")) {
+        // CONST ?
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("CONST")) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-            while (UNILEX == TUnilex.IDENT) {
+            if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
-                UNILEX = AnalyseurLexical.ANALEX();
+                do {
 
-                if (UNILEX == TUnilex.EG) {
+                    String nomConst = AnalyseurLexical.CHAINE;
 
-                    UNILEX = AnalyseurLexical.ANALEX();
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-                    if (UNILEX == TUnilex.ENT ||
-                            UNILEX == TUnilex.CH) {
-
-                        UNILEX = AnalyseurLexical.ANALEX();
-
-                        if (UNILEX == TUnilex.PTVIRG) {
-                            UNILEX = AnalyseurLexical.ANALEX();
-                        } else {
-                            return false;
-                        }
-                    } else {
+                    if (AnalyseurLexical.UNILEX != TUnilex.EG) {
+                        MESSAGE_ERREUR = "Erreur syntaxique : '=' attendu";
+                        ERREUR();
                         return false;
                     }
-                } else {
-                    return false;
-                }
+
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                    if (AnalyseurLexical.UNILEX != TUnilex.ENT && AnalyseurLexical.UNILEX != TUnilex.CH) {
+                        MESSAGE_ERREUR = "Erreur syntaxique : ENT ou CH attendu";
+                        ERREUR();
+                        return false;
+                    }
+
+                    if (!DEFINIR_CONSTANTE(nomConst, AnalyseurLexical.UNILEX)) {
+                        return false;
+                    }
+
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                    if (AnalyseurLexical.UNILEX != TUnilex.PTVIRG) {
+                        MESSAGE_ERREUR = "Erreur syntaxique : ';' attendu";
+                        ERREUR();
+                        return false;
+                    }
+
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                } while (AnalyseurLexical.UNILEX == TUnilex.IDENT);
+
+            } else {
+                MESSAGE_ERREUR = "Erreur syntaxique : identificateur attendu apres CONST";
+                ERREUR();
+                return false;
             }
         }
 
-        return true; // partie optionnelle
+        return true;
     }
 
     public static boolean DECL_VAR() {
         System.out.println("DECL_VAR");
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("VAR")) {
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("VAR")) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-            if (UNILEX == TUnilex.IDENT) {
+            if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
-                UNILEX = AnalyseurLexical.ANALEX();
+                do {
 
-                while (UNILEX == TUnilex.VIRG) {
+                    String nomVar = AnalyseurLexical.CHAINE;
 
-                    UNILEX = AnalyseurLexical.ANALEX();
-
-                    if (UNILEX == TUnilex.IDENT) {
-                        UNILEX = AnalyseurLexical.ANALEX();
-                    } else {
-                        return false;
+                    if (!DEFINIR_VARIABLE(nomVar)) {
+                        MESSAGE_ERREUR = "Erreur syntaxique dans declaration VAR";
+                        ERREUR();
                     }
-                }
 
-                if (UNILEX == TUnilex.PTVIRG) {
-                    UNILEX = AnalyseurLexical.ANALEX();
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                    if (AnalyseurLexical.UNILEX == TUnilex.VIRG) {
+                        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+                    } else {
+                        break;
+                    }
+
+                } while (AnalyseurLexical.UNILEX == TUnilex.IDENT);
+
+                if (AnalyseurLexical.UNILEX == TUnilex.PTVIRG) {
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
                     return true;
+                } else {
+                    MESSAGE_ERREUR = "Erreur syntaxique dans declaration VAR";
+                    ERREUR();
                 }
             }
 
-            return false;
+            MESSAGE_ERREUR = "Erreur syntaxique dans declaration VAR";
+            ERREUR();
         }
 
-        return true; // partie optionnelle
+        return true;
     }
 
     public static boolean BLOC() {
         System.out.println("BLOC");
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("DEBUT")) {
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("DEBUT")) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
             if (INSTRUCTION()) {
 
-                while (UNILEX == TUnilex.PTVIRG) {
+                while (AnalyseurLexical.UNILEX == TUnilex.PTVIRG) {
 
-                    UNILEX = AnalyseurLexical.ANALEX();
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                    if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                            && AnalyseurLexical.CHAINE.equals("FIN")) {
+                        break;
+                    }
 
                     if (!INSTRUCTION()) {
-                        System.out.println("pas d'instruction apres le point virgule");
+                        MESSAGE_ERREUR = "pas d'instruction apres le point virgule";
+                        ERREUR();
                         return false;
                     }
                 }
 
-                if (UNILEX == TUnilex.MOTCLE &&
-                        AnalyseurLexical.CHAINE.equals("FIN")) {
+                if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                        && AnalyseurLexical.CHAINE.equals("FIN")) {
 
-                    UNILEX = AnalyseurLexical.ANALEX();
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
                     return true;
                 }
             }
         }
-        System.out.println("BLOC: erreur de syntaxe");
+        MESSAGE_ERREUR = "BLOC: erreur de syntaxe";
+        ERREUR();
         return false;
     }
 
@@ -150,39 +202,67 @@ public class AnalyseurSyntaxique {
 
         System.out.println("INSTRUCTION");
 
-        if (UNILEX == TUnilex.IDENT)
+        if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
             return AFFECTATION();
+        }
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("LIRE"))
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("LIRE")) {
             return LECTURE();
+        }
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("ECRIRE"))
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("ECRIRE")) {
             return ECRITURE();
+        }
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("DEBUT"))
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("DEBUT")) {
             return BLOC();
-        
-        System.out.println("INSTRUCTION: erreur de syntaxe");
+        }
+
+        MESSAGE_ERREUR = "INSTRUCTION: erreur de syntaxe";
+        ERREUR();
         return false;
     }
 
     public static boolean AFFECTATION() {
         System.out.println("AFFECTATION");
 
-        if (UNILEX == TUnilex.IDENT) {
+        if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            String nom = AnalyseurLexical.CHAINE;
 
-            if (UNILEX == TUnilex.AFF) {
+            int index = tableIdent.chercher(nom);
+            if (index == -1) {
+                MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
+                ERREUR();
+            }
 
-                UNILEX = AnalyseurLexical.ANALEX();
+            Identificateur id = tableIdent.get(index);
+
+            if (id.getGenre() != GenreIdent.VARIABLE) {
+                MESSAGE_ERREUR = "Erreur semantique : affectation sur constante";
+                ERREUR();
+            }
+
+            GEN(TCode.EMPI, id.adresse);
+
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+            if (AnalyseurLexical.UNILEX == TUnilex.AFF) {
+
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
                 if (EXP()) {
+
+                    GEN(TCode.AFFE);
+
                     return true;
                 }
+            } else {
+                MESSAGE_ERREUR = ":= attendu";
+                ERREUR();
             }
         }
 
@@ -192,32 +272,68 @@ public class AnalyseurSyntaxique {
     public static boolean LECTURE() {
         System.out.println("LECTURE");
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("LIRE")) {
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("LIRE")) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-            if (UNILEX == TUnilex.PAROUV) {
+            if (AnalyseurLexical.UNILEX == TUnilex.PAROUV) {
 
-                UNILEX = AnalyseurLexical.ANALEX();
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-                if (UNILEX == TUnilex.IDENT) {
+                if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
-                    UNILEX = AnalyseurLexical.ANALEX();
+                    String nom = AnalyseurLexical.CHAINE;
 
-                    while (UNILEX == TUnilex.VIRG) {
+                    int index = tableIdent.chercher(nom);
+                    if (index == -1) {
+                        MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
+                        ERREUR();
+                    }
 
-                        UNILEX = AnalyseurLexical.ANALEX();
+                    Identificateur id = tableIdent.get(index);
+                    if (id.getGenre() != GenreIdent.VARIABLE) {
+                        MESSAGE_ERREUR = "Erreur semantique : lecture sur constante";
+                        ERREUR();
+                    }
 
-                        if (UNILEX == TUnilex.IDENT) {
-                            UNILEX = AnalyseurLexical.ANALEX();
+                    GEN(TCode.EMPI, id.adresse);
+                    GEN(TCode.LIRE);
+
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                    while (AnalyseurLexical.UNILEX == TUnilex.VIRG) {
+
+                        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                        if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
+
+                            nom = AnalyseurLexical.CHAINE;
+
+                            index = tableIdent.chercher(nom);
+                            if (index == -1) {
+                                MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
+                                ERREUR();
+                            }
+
+                            id = tableIdent.get(index);
+                            if (id.getGenre() != GenreIdent.VARIABLE) {
+                                MESSAGE_ERREUR = "Erreur semantique : lecture sur constante";
+                                ERREUR();
+                            }
+
+                            GEN(TCode.EMPI, id.adresse);
+                            GEN(TCode.LIRE);
+
+                            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
                         } else {
                             return false;
                         }
                     }
 
-                    if (UNILEX == TUnilex.PARFER) {
-                        UNILEX = AnalyseurLexical.ANALEX();
+                    if (AnalyseurLexical.UNILEX == TUnilex.PARFER) {
+                        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
                         return true;
                     }
                 }
@@ -230,20 +346,20 @@ public class AnalyseurSyntaxique {
     public static boolean ECRITURE() {
         System.out.println("ECRITURE");
 
-        if (UNILEX == TUnilex.MOTCLE &&
-                AnalyseurLexical.CHAINE.equals("ECRIRE")) {
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("ECRIRE")) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-            if (UNILEX == TUnilex.PAROUV) {
+            if (AnalyseurLexical.UNILEX == TUnilex.PAROUV) {
 
-                UNILEX = AnalyseurLexical.ANALEX();
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
                 if (ECR_EXP()) {
 
-                    while (UNILEX == TUnilex.VIRG) {
+                    while (AnalyseurLexical.UNILEX == TUnilex.VIRG) {
 
-                        UNILEX = AnalyseurLexical.ANALEX();
+                        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
                         if (!ECR_EXP()) {
                             return false;
@@ -251,8 +367,8 @@ public class AnalyseurSyntaxique {
                     }
                 }
 
-                if (UNILEX == TUnilex.PARFER) {
-                    UNILEX = AnalyseurLexical.ANALEX();
+                if (AnalyseurLexical.UNILEX == TUnilex.PARFER) {
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
                     return true;
                 }
             }
@@ -264,12 +380,24 @@ public class AnalyseurSyntaxique {
     public static boolean ECR_EXP() {
         System.out.println("ECR_EXP");
 
-        if (UNILEX == TUnilex.CH) {
-            UNILEX = AnalyseurLexical.ANALEX();
+        if (AnalyseurLexical.UNILEX == TUnilex.CH) {
+
+            VAL_DE_CONST_CHAINE[NB_CONST_CHAINE] = AnalyseurLexical.CHAINE;
+
+            GEN(TCode.ECRC, NB_CONST_CHAINE);
+
+            NB_CONST_CHAINE++;
+
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
             return true;
         }
 
-        return EXP();
+        if (EXP()) {
+            GEN(TCode.ECRE);
+            return true;
+        }
+
+        return false;
     }
 
     public static boolean EXP() {
@@ -285,40 +413,88 @@ public class AnalyseurSyntaxique {
     public static boolean SUITE_TERME() {
         System.out.println("SUITE_TERME");
 
-        if (UNILEX == TUnilex.PLUS ||
-                UNILEX == TUnilex.MOINS ||
-                UNILEX == TUnilex.MULT ||
-                UNILEX == TUnilex.DIVI) {
+        if (AnalyseurLexical.UNILEX == TUnilex.PLUS
+                || AnalyseurLexical.UNILEX == TUnilex.MOINS
+                || AnalyseurLexical.UNILEX == TUnilex.MULT
+                || AnalyseurLexical.UNILEX == TUnilex.DIVI) {
+
+            TUnilex op = AnalyseurLexical.UNILEX;
 
             if (OP_BIN()) {
-                return EXP();
+
+                if (TERME()) {
+
+                    switch (op) {
+                        case PLUS:
+                            GEN(TCode.ADDI);
+                            break;
+                        case MOINS:
+                            GEN(TCode.SOUS);
+                            break;
+                        case MULT:
+                            GEN(TCode.MULT);
+                            break;
+                        case DIVI:
+                            GEN(TCode.DIVI);
+                            break;
+                    }
+
+                    return SUITE_TERME();
+                }
             }
 
             return false;
         }
 
-        // ε (vide)
         return true;
     }
 
     public static boolean TERME() {
         System.out.println("TERME");
 
-        if (UNILEX == TUnilex.ENT ||
-                UNILEX == TUnilex.IDENT) {
+        if (AnalyseurLexical.UNILEX == TUnilex.ENT) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            GEN(TCode.EMPI, AnalyseurLexical.NOMBRE);
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
             return true;
         }
 
-        if (UNILEX == TUnilex.PAROUV) {
+        if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            String nom = AnalyseurLexical.CHAINE;
+
+            int index = tableIdent.chercher(nom);
+            if (index == -1) {
+                MESSAGE_ERREUR = "identificateur non declare";
+                ERREUR();
+            }
+
+            Identificateur id = tableIdent.get(index);
+
+            if (id.typc != 0) {
+                MESSAGE_ERREUR = "type incorrect dans expression arithmetique";
+                ERREUR();
+            }
+
+            if (id.getGenre() == GenreIdent.CONSTANTE) {
+                GEN(TCode.EMPI, id.val);
+            } else {
+                GEN(TCode.EMPI, id.adresse);
+                GEN(TCode.CONT);
+            }
+
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+            return true;
+        }
+
+        if (AnalyseurLexical.UNILEX == TUnilex.PAROUV) {
+
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
             if (EXP()) {
 
-                if (UNILEX == TUnilex.PARFER) {
-                    UNILEX = AnalyseurLexical.ANALEX();
+                if (AnalyseurLexical.UNILEX == TUnilex.PARFER) {
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
                     return true;
                 }
             }
@@ -326,10 +502,16 @@ public class AnalyseurSyntaxique {
             return false;
         }
 
-        if (UNILEX == TUnilex.MOINS) {
+        if (AnalyseurLexical.UNILEX == TUnilex.MOINS) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
-            return TERME();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+            if (TERME()) {
+                GEN(TCode.MOIN);
+                return true;
+            }
+
+            return false;
         }
 
         return false;
@@ -338,12 +520,12 @@ public class AnalyseurSyntaxique {
     public static boolean OP_BIN() {
         System.out.println("OP_BIN");
 
-        if (UNILEX == TUnilex.PLUS ||
-                UNILEX == TUnilex.MOINS ||
-                UNILEX == TUnilex.MULT ||
-                UNILEX == TUnilex.DIVI) {
+        if (AnalyseurLexical.UNILEX == TUnilex.PLUS
+                || AnalyseurLexical.UNILEX == TUnilex.MOINS
+                || AnalyseurLexical.UNILEX == TUnilex.MULT
+                || AnalyseurLexical.UNILEX == TUnilex.DIVI) {
 
-            UNILEX = AnalyseurLexical.ANALEX();
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
             return true;
         }
 
@@ -352,21 +534,220 @@ public class AnalyseurSyntaxique {
 
     public static void ANASYNT() {
 
-        // Lire la première unité lexicale
-        UNILEX = AnalyseurLexical.ANALEX();
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-        // Vérifier la grammaire
         if (PROG()) {
 
+            GEN(TCode.STOP);
             System.out.println("Le programme source est syntaxiquement correct");
 
         } else {
-            System.out.println("Erreur syntaxique");
-            System.out.println("Unilex: " + UNILEX);
-            System.out.println("CHAINE: " + AnalyseurLexical.CHAINE);
-            System.out.println("CARLU: " + AnalyseurLexical.CARLU);
-            System.exit(3);
+            ERREUR();
+        }
+        tableIdent.afficher();
+        afficherPCODE();
+
+        System.out.println("\n  EXECUTION : \n");
+        INTERPRETER();
+    }
+
+    public static boolean DEFINIR_CONSTANTE(String nom, TUnilex ul) {
+
+        if (tableIdent.chercher(nom) != -1) {
+            MESSAGE_ERREUR = "Erreur semantique : identificateur deja declare";
+            ERREUR();
+            return false;
+        }
+
+        Identificateur e = new Identificateur(nom);
+        e.typ = GenreIdent.CONSTANTE;
+
+        if (ul == TUnilex.ENT) {
+            e.typc = 0;
+            e.val = AnalyseurLexical.NOMBRE;
+        } else {
+            e.typc = 1;
+            VAL_DE_CONST_CHAINE[NB_CONST_CHAINE] = AnalyseurLexical.CHAINE;
+            e.val = NB_CONST_CHAINE;
+            NB_CONST_CHAINE++;
+        }
+
+        tableIdent.inserer(e);
+
+        return true;
+    }
+
+    public static boolean DEFINIR_VARIABLE(String nom) {
+
+        if (tableIdent.chercher(nom) != -1) {
+            MESSAGE_ERREUR = "Erreur semantique : deja declare";
+            ERREUR();
+            return false;
+        }
+
+        Identificateur e = new Identificateur(nom);
+
+        e.typ = GenreIdent.VARIABLE;
+        e.typc = 0;
+
+        DERNIERE_ADRESSE_VAR_GLOB++;
+        e.adresse = DERNIERE_ADRESSE_VAR_GLOB;
+
+        tableIdent.inserer(e);
+
+        return true;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////
+
+    public static void GEN(int instruction) {
+        PCODE[CO++] = instruction;
+    }
+
+    public static void GEN(int instruction, int valeur) {
+        PCODE[CO++] = instruction;
+        PCODE[CO++] = valeur;
+    }
+
+    public static String nomInstruction(int code) {
+        switch (code) {
+            case TCode.ADDI:
+                return "ADDI";
+            case TCode.SOUS:
+                return "SOUS";
+            case TCode.MULT:
+                return "MULT";
+            case TCode.DIVI:
+                return "DIVI";
+            case TCode.MOIN:
+                return "MOIN";
+            case TCode.AFFE:
+                return "AFFE";
+            case TCode.LIRE:
+                return "LIRE";
+            case TCode.ECRE:
+                return "ECRE";
+            case TCode.ECRL:
+                return "ECRL";
+            case TCode.ECRC:
+                return "ECRC";
+            case TCode.EMPI:
+                return "EMPI";
+            case TCode.CONT:
+                return "CONT";
+            case TCode.STOP:
+                return "STOP";
+            default:
+                return "UNKNOWN";
         }
     }
 
+    public static void afficherPCODE() {
+
+        System.out.println("\n PCODE (lisible) : \n");
+
+        int i = 0;
+
+        while (i < CO) {
+
+            int instruction = PCODE[i];
+
+            System.out.print(i + " : " + nomInstruction(instruction));
+
+            if (instruction == TCode.EMPI || instruction == TCode.ECRC) {
+                System.out.print(" " + PCODE[i + 1]);
+                i += 2;
+            } else {
+                i += 1;
+            }
+
+            System.out.println();
+        }
+    }
+
+    public static void INTERPRETER() {
+
+        CO = 0;
+        int SOM_PILEX = -1;
+        int[] PILEX = new int[1000];
+        int[] MEMVAR = new int[100];
+
+        while (PCODE[CO] != TCode.STOP) {
+
+            switch (PCODE[CO]) {
+
+                case TCode.ADDI:
+                    PILEX[SOM_PILEX - 1] = PILEX[SOM_PILEX - 1] + PILEX[SOM_PILEX];
+                    SOM_PILEX = SOM_PILEX - 1;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.SOUS:
+                    PILEX[SOM_PILEX - 1] = PILEX[SOM_PILEX - 1] - PILEX[SOM_PILEX];
+                    SOM_PILEX = SOM_PILEX - 1;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.MULT:
+                    PILEX[SOM_PILEX - 1] = PILEX[SOM_PILEX - 1] * PILEX[SOM_PILEX];
+                    SOM_PILEX = SOM_PILEX - 1;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.DIVI:
+                    PILEX[SOM_PILEX - 1] = PILEX[SOM_PILEX - 1] / PILEX[SOM_PILEX];
+                    SOM_PILEX = SOM_PILEX - 1;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.MOIN:
+                    PILEX[SOM_PILEX] = -PILEX[SOM_PILEX];
+                    CO = CO + 1;
+                    break;
+
+                case TCode.AFFE:
+                    MEMVAR[PILEX[SOM_PILEX - 1]] = PILEX[SOM_PILEX];
+                    SOM_PILEX = SOM_PILEX - 2;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.LIRE:
+                    java.util.Scanner sc = new java.util.Scanner(System.in);
+                    MEMVAR[PILEX[SOM_PILEX]] = sc.nextInt();
+                    SOM_PILEX = SOM_PILEX - 1;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.ECRE:
+                    System.out.println(PILEX[SOM_PILEX]);
+                    SOM_PILEX = SOM_PILEX - 1;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.ECRL:
+                    System.out.println();
+                    CO = CO + 1;
+                    break;
+
+                case TCode.ECRC:
+                    int index = PCODE[CO + 1];
+                    System.out.print(VAL_DE_CONST_CHAINE[index]);
+                    CO = CO + 2;
+                    break;
+
+                case TCode.EMPI:
+                    SOM_PILEX = SOM_PILEX + 1;
+                    PILEX[SOM_PILEX] = PCODE[CO + 1];
+                    CO = CO + 2;
+                    break;
+
+                case TCode.CONT:
+                    PILEX[SOM_PILEX] = MEMVAR[PILEX[SOM_PILEX]];
+                    CO = CO + 1;
+                    break;
+            }
+        }
+    }
 }

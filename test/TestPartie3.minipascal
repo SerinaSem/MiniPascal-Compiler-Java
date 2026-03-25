@@ -1,0 +1,7 @@
+PROGRAMME test;
+VAR 
+    x;
+DEBUT
+    x := 2 + 3 * 4;
+    ECRIRE(x)
+FIN.
