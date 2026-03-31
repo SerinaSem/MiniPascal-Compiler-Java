@@ -1,4 +1,8 @@
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+
 public class AnalyseurSyntaxique {
 
     static TableIdentificateurs tableIdent = new TableIdentificateurs();
@@ -57,62 +61,60 @@ public class AnalyseurSyntaxique {
     }
 
     public static boolean DECL_CONST() {
+    System.out.println("DECL_CONST");
 
-        System.out.println("DECL_CONST");
+    if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+            && AnalyseurLexical.CHAINE.equals("CONST")) {
 
-        // CONST ?
-        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
-                && AnalyseurLexical.CHAINE.equals("CONST")) {
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (AnalyseurLexical.UNILEX != TUnilex.IDENT) {
+            MESSAGE_ERREUR = "identificateur attendu apres CONST";
+            ERREUR();
+        }
+
+        while (true) {
+
+            String nomConst = AnalyseurLexical.CHAINE;
 
             AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
-            if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
-
-                do {
-
-                    String nomConst = AnalyseurLexical.CHAINE;
-
-                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
-
-                    if (AnalyseurLexical.UNILEX != TUnilex.EG) {
-                        MESSAGE_ERREUR = "Erreur syntaxique : '=' attendu";
-                        ERREUR();
-                        return false;
-                    }
-
-                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
-
-                    if (AnalyseurLexical.UNILEX != TUnilex.ENT && AnalyseurLexical.UNILEX != TUnilex.CH) {
-                        MESSAGE_ERREUR = "Erreur syntaxique : ENT ou CH attendu";
-                        ERREUR();
-                        return false;
-                    }
-
-                    if (!DEFINIR_CONSTANTE(nomConst, AnalyseurLexical.UNILEX)) {
-                        return false;
-                    }
-
-                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
-
-                    if (AnalyseurLexical.UNILEX != TUnilex.PTVIRG) {
-                        MESSAGE_ERREUR = "Erreur syntaxique : ';' attendu";
-                        ERREUR();
-                        return false;
-                    }
-
-                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
-
-                } while (AnalyseurLexical.UNILEX == TUnilex.IDENT);
-
-            } else {
-                MESSAGE_ERREUR = "Erreur syntaxique : identificateur attendu apres CONST";
+            if (AnalyseurLexical.UNILEX != TUnilex.EG) {
+                MESSAGE_ERREUR = "'=' attendu";
                 ERREUR();
+            }
+
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+            if (AnalyseurLexical.UNILEX != TUnilex.ENT
+                    && AnalyseurLexical.UNILEX != TUnilex.CH) {
+                MESSAGE_ERREUR = "ENT ou CH attendu";
+                ERREUR();
+            }
+
+            if (!DEFINIR_CONSTANTE(nomConst, AnalyseurLexical.UNILEX)) {
                 return false;
             }
-        }
 
-        return true;
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+            if (AnalyseurLexical.UNILEX == TUnilex.VIRG) {
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+                continue;
+            }
+
+            if (AnalyseurLexical.UNILEX == TUnilex.PTVIRG) {
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+                break;
+            }
+
+            MESSAGE_ERREUR = "',' ou ';' attendu";
+            ERREUR();
+        }
     }
+
+    return true;
+}
 
     public static boolean DECL_VAR() {
         System.out.println("DECL_VAR");
@@ -381,12 +383,13 @@ public class AnalyseurSyntaxique {
         System.out.println("ECR_EXP");
 
         if (AnalyseurLexical.UNILEX == TUnilex.CH) {
+            String ch = AnalyseurLexical.CHAINE;
 
-            VAL_DE_CONST_CHAINE[NB_CONST_CHAINE] = AnalyseurLexical.CHAINE;
-
-            GEN(TCode.ECRC, NB_CONST_CHAINE);
-
-            NB_CONST_CHAINE++;
+            GEN(TCode.ECRC);
+            for (int i = 0; i < ch.length(); i++) {
+                GEN((int) ch.charAt(i));
+            }
+            GEN(TCode.FINC);
 
             AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
             return true;
@@ -546,6 +549,7 @@ public class AnalyseurSyntaxique {
         }
         tableIdent.afficher();
         afficherPCODE();
+        ecrirePCODEDansFichier("PCODE_genere.txt");
 
         System.out.println("\n  EXECUTION : \n");
         INTERPRETER();
@@ -633,6 +637,8 @@ public class AnalyseurSyntaxique {
                 return "ECRL";
             case TCode.ECRC:
                 return "ECRC";
+            case TCode.FINC:
+                return "FINC";
             case TCode.EMPI:
                 return "EMPI";
             case TCode.CONT:
@@ -644,26 +650,97 @@ public class AnalyseurSyntaxique {
         }
     }
 
+    public static String chainePCodeCompacte(int debut) {
+        StringBuilder sb = new StringBuilder();
+        int i = debut;
+
+        while (i < CO && PCODE[i] != TCode.FINC) {
+            char c = (char) PCODE[i];
+            if (c == '\'') {
+                sb.append("''");
+            } else {
+                sb.append(c);
+            }
+            i++;
+        }
+
+        return sb.toString();
+    }
+
+
+    public static String lignePCode(int debut) {
+        int instruction = PCODE[debut];
+        StringBuilder sb = new StringBuilder(nomInstruction(instruction));
+
+        if (instruction == TCode.EMPI) {
+            sb.append(" ").append(PCODE[debut + 1]);
+            return sb.toString();
+        }
+
+        if (instruction == TCode.ECRC) {
+            sb.append(" '").append(chainePCodeCompacte(debut + 1)).append("' FINC");
+        }
+
+        return sb.toString();
+    }
+
+    public static int instructionSuivante(int debut) {
+        int instruction = PCODE[debut];
+
+        if (instruction == TCode.EMPI) {
+            return debut + 2;
+        }
+
+        if (instruction == TCode.ECRC) {
+            int i = debut + 1;
+            while (i < CO && PCODE[i] != TCode.FINC) {
+                i++;
+            }
+            return i + 1;
+        }
+
+        return debut + 1;
+    }
+
+    public static String chainePCodeLisible(int debut) {
+        StringBuilder sb = new StringBuilder();
+        int i = debut;
+
+        while (i < CO && PCODE[i] != TCode.FINC) {
+            char c = (char) PCODE[i];
+            if (c == '\\' || c == '"') {
+                sb.append('\\');
+            }
+            sb.append(c);
+            i++;
+        }
+
+        return sb.toString();
+    }
+
     public static void afficherPCODE() {
 
-        System.out.println("\n PCODE (lisible) : \n");
+        System.out.println("\nPCODE (format PDF) :\n");
+        System.out.println((DERNIERE_ADRESSE_VAR_GLOB + 1) + " mot(s) reserve(s) pour les variables globales");
 
         int i = 0;
 
         while (i < CO) {
+            System.out.println(lignePCode(i));
+            i = instructionSuivante(i);
+        }
+    }
 
-            int instruction = PCODE[i];
-
-            System.out.print(i + " : " + nomInstruction(instruction));
-
-            if (instruction == TCode.EMPI || instruction == TCode.ECRC) {
-                System.out.print(" " + PCODE[i + 1]);
-                i += 2;
-            } else {
-                i += 1;
+    public static void ecrirePCODEDansFichier(String nomFichier) {
+        try (PrintWriter out = new PrintWriter(new FileWriter(nomFichier))) {
+            out.println((DERNIERE_ADRESSE_VAR_GLOB + 1) + " mot(s) reserve(s) pour les variables globales");
+            int i = 0;
+            while (i < CO) {
+                out.println(lignePCode(i));
+                i = instructionSuivante(i);
             }
-
-            System.out.println();
+        } catch (IOException e) {
+            System.out.println("Impossible d'ecrire le fichier " + nomFichier);
         }
     }
 
@@ -732,9 +809,12 @@ public class AnalyseurSyntaxique {
                     break;
 
                 case TCode.ECRC:
-                    int index = PCODE[CO + 1];
-                    System.out.print(VAL_DE_CONST_CHAINE[index]);
-                    CO = CO + 2;
+                    CO = CO + 1;
+                    while (PCODE[CO] != TCode.FINC) {
+                        System.out.print((char) PCODE[CO]);
+                        CO = CO + 1;
+                    }
+                    CO = CO + 1;
                     break;
 
                 case TCode.EMPI:

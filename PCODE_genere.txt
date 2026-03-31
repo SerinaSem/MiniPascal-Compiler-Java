@@ -1,0 +1,31 @@
+3 mot(s) reserve(s) pour les variables globales
+ECRC 'Type a number: ' FINC
+EMPI 2
+LIRE
+EMPI 1
+EMPI 2
+CONT
+EMPI 2
+MULT
+EMPI 2
+MULT
+AFFE
+ECRC 'Of block' FINC
+ECRC 'In block' FINC
+ECRC 'Your number multiplied by 4 '' is: ' FINC
+EMPI 1
+CONT
+ECRE
+EMPI 1
+EMPI 1
+CONT
+EMPI 1
+CONT
+MULT
+AFFE
+ECRC 'Of block' FINC
+ECRC 'Your number multiplied by 4 then by itself is: ' FINC
+EMPI 1
+CONT
+ECRE
+STOP

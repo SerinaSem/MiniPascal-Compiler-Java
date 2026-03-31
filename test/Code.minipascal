@@ -1,13 +1,19 @@
-PROGRAMME myApp;
+PROGRAMME myApp; {this is a {nested} comment}
 CONST
-    x ='a';
-    b = 2;
+	x = 'a',
+	b = 2;
 VAR
-    z, t;
+	z, t;
 DEBUT
-    {this is { a comment}} 
     ECRIRE('Type a number: ');
     LIRE(t);
     z := t * b * 2;
-    ECRIRE('Your n''umber multiplied by 4 is: ', z)
+    ECRIRE('Of block');
+    DEBUT
+        ECRIRE('In block');
+        ECRIRE('Your number multiplied by 4 is: ', z);
+        z := z * z
+    FIN;
+    ECRIRE('Of block');
+    ECRIRE('Your number multiplied by 4 then by itself is: ', z)
 FIN.
