@@ -1,0 +1,14 @@
+PROGRAMME TESTREC;
+VAR X;
+FONCTION SOMME(N): ENTIER;
+DEBUT
+    SI N ALORS
+        SOMME := N + SOMME(N - 1)
+    SINON
+        SOMME := 0
+FIN;
+DEBUT
+    X := SOMME(4);
+    ECRIRE(X);
+    ECRIRE()
+FIN.

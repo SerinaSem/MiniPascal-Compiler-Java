@@ -1,8 +1,0 @@
-PROGRAMME test;
-CONST
-    x = 'hello';
-VAR
-    y;
-DEBUT
-    y := x + 2;
-FIN.

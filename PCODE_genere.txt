@@ -1,31 +1,30 @@
-3 mot(s) reserve(s) pour les variables globales
-ECRC 'Type a number: ' FINC
-EMPI 2
-LIRE
+1 mot(s) reserve(s) pour les variables globales
+ALLE 30
+LIBP 0
+ALSN 24
+EMPI -99998
+LIBP 0
+EMPI 0
+SAVEBP
+LIBP 0
 EMPI 1
-EMPI 2
-CONT
-EMPI 2
-MULT
-EMPI 2
-MULT
+SOUS
+APPEL 2
+ADDI
 AFFE
-ECRC 'Of block' FINC
-ECRC 'In block' FINC
-ECRC 'Your number multiplied by 4 '' is: ' FINC
-EMPI 1
+ALLE 29
+EMPI -99998
+EMPI 0
+AFFE
+RETOUR
+EMPI 0
+EMPI 0
+SAVEBP
+EMPI 4
+APPEL 2
+AFFE
+EMPI 0
 CONT
 ECRE
-EMPI 1
-EMPI 1
-CONT
-EMPI 1
-CONT
-MULT
-AFFE
-ECRC 'Of block' FINC
-ECRC 'Your number multiplied by 4 then by itself is: ' FINC
-EMPI 1
-CONT
-ECRE
+ECRL
 STOP

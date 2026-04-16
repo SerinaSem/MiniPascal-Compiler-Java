@@ -1,0 +1,16 @@
+PROGRAMME TESTTQ;
+VAR I;
+DEBUT
+    I := 3;
+    TANTQUE I FAIRE
+    DEBUT
+        X := 1;
+    SI X ALORS
+        ECRIRE('ok')
+    SINON
+        ECRIRE('ko');
+    ECRIRE()
+    FIN;
+    ECRIRE('fin');
+    ECRIRE()
+FIN.

@@ -1,0 +1,10 @@
+PROGRAMME TESTSI;
+VAR X;
+DEBUT
+    X := 1;
+    SI X ALORS
+        ECRIRE('ok')
+    SINON
+        ECRIRE('ko');
+    ECRIRE()
+FIN.

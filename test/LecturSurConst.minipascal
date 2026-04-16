@@ -1,6 +1,0 @@
-PROGRAMME test;
-CONST
-    x = 5;
-DEBUT
-    LIRE(x);
-FIN.

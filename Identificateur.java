@@ -5,6 +5,7 @@ public class Identificateur {
     public int typc;         // 0 = entier, 1 = chaine
     public int val;          // valeur ou index
     public int adresse;      // pour variable
+    public int nbParam;      // pour fonction
 
     public Identificateur(String nom) {
         this.nom = nom;

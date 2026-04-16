@@ -13,4 +13,12 @@ class TCode {
     static final int EMPI = 11;
     static final int CONT = 12;
     static final int STOP = 13;
+    static final int ALLE = 14;
+    static final int ALSN = 15;
+    static final int APPEL = 16;
+    static final int RETOUR = 17;
+    static final int SAVEBP = 18;
+    static final int RSTRBP = 19;
+    static final int DUPL = 20;
+    static final int LIBP = 21;
 }

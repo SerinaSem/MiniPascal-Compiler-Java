@@ -1,0 +1,32 @@
+PROGRAMME myApp; {this is a {nested} comment}
+CONST
+	x = 'a',
+	b = 2;
+VAR
+	z, t;
+DEBUT
+	ECRIRE('Type a number: ');
+	LIRE(t);
+	z := t * b * 2;
+	DEBUT
+		ECRIRE('Your number multiplied by 4 is: ', z);
+		z := z * z
+	FIN;
+	ECRIRE();
+	SI z ALORS
+		ECRIRE('your number is not null')
+	SINON
+		ECRIRE('your number is null');
+	ECRIRE();
+
+	TANTQUE t FAIRE
+	DEBUT
+		ECRIRE('Current t: ', t);
+		SI t - 1 ALORS
+			ECRIRE(' t is different from 1')
+		SINON
+			ECRIRE(' t is equal to 1');
+		ECRIRE();
+		t := t - 1
+	FIN;
+FIN.

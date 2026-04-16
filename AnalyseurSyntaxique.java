@@ -2,22 +2,40 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AnalyseurSyntaxique {
+
+    static class ContexteFonction {
+        String nom;
+        Map<String, Integer> deplacements = new HashMap<>();
+        Identificateur ident;
+    }
 
     static TableIdentificateurs tableIdent = new TableIdentificateurs();
 
     static int NB_CONST_CHAINE;
     static String[] VAL_DE_CONST_CHAINE = new String[100];
-    static int DERNIERE_ADRESSE_VAR_GLOB;
+    static int DERNIERE_ADRESSE_VAR_GLOB = -1;
     static String MESSAGE_ERREUR;
     static int[] PCODE = new int[1000];
     static int CO = 0;
+    static int[] PILOP = new int[100];
+    static int SOM_PILOP = -1;
+    static ContexteFonction fonctionCourante = null;
+    static final int BASE_ADRESSE_RELATIVE = 100000;
 
     public static void initialiser() {
+        tableIdent = new TableIdentificateurs();
+        PCODE = new int[1000];
+        VAL_DE_CONST_CHAINE = new String[100];
+        CO = 0;
         AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
         NB_CONST_CHAINE = 0;
         DERNIERE_ADRESSE_VAR_GLOB = -1;
+        SOM_PILOP = -1;
+        fonctionCourante = null;
     }
 
     public static void ERREUR() {
@@ -45,6 +63,14 @@ public class AnalyseurSyntaxique {
 
                         if (DECL_VAR()) {
 
+                            GEN(TCode.ALLE, 0);
+                            int adrSautMain = CO - 1;
+
+                            while (DEF_FCT()) {
+                            }
+
+                            PCODE[adrSautMain] = CO;
+
                             if (BLOC()) {
 
                                 if (AnalyseurLexical.UNILEX == TUnilex.POINT) {
@@ -55,6 +81,134 @@ public class AnalyseurSyntaxique {
                     }
                 }
             }
+        }
+
+        return false;
+    }
+
+    public static boolean DEF_FCT() {
+        System.out.println("DEF_FCT");
+
+        if (!(AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("FONCTION"))) {
+            return false;
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (AnalyseurLexical.UNILEX != TUnilex.IDENT) {
+            MESSAGE_ERREUR = "identificateur attendu apres FONCTION";
+            ERREUR();
+        }
+
+        String nomFonction = AnalyseurLexical.CHAINE;
+
+        if (tableIdent.chercher(nomFonction) != -1) {
+            MESSAGE_ERREUR = "Erreur semantique : identificateur deja declare";
+            ERREUR();
+        }
+
+        Identificateur fct = new Identificateur(nomFonction);
+        fct.typ = GenreIdent.FONCTION;
+        fct.typc = 0;
+        tableIdent.inserer(fct);
+
+        ContexteFonction ancienContexte = fonctionCourante;
+        fonctionCourante = new ContexteFonction();
+        fonctionCourante.nom = nomFonction;
+        fonctionCourante.ident = fct;
+        fonctionCourante.deplacements.put(nomFonction, -2);
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (AnalyseurLexical.UNILEX != TUnilex.PAROUV) {
+            MESSAGE_ERREUR = "'(' attendu dans la definition de fonction";
+            ERREUR();
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        int nbParam = 0;
+        if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
+            while (true) {
+                String nomParam = AnalyseurLexical.CHAINE;
+
+                if (fonctionCourante.deplacements.containsKey(nomParam)) {
+                    MESSAGE_ERREUR = "Erreur semantique : parametre duplique";
+                    ERREUR();
+                }
+
+                fonctionCourante.deplacements.put(nomParam, nbParam);
+                nbParam++;
+
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                if (AnalyseurLexical.UNILEX == TUnilex.VIRG) {
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+                    if (AnalyseurLexical.UNILEX != TUnilex.IDENT) {
+                        MESSAGE_ERREUR = "identificateur attendu dans la liste des parametres";
+                        ERREUR();
+                    }
+                    continue;
+                }
+                break;
+            }
+        }
+
+        if (AnalyseurLexical.UNILEX != TUnilex.PARFER) {
+            MESSAGE_ERREUR = "')' attendu dans la definition de fonction";
+            ERREUR();
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (AnalyseurLexical.UNILEX != TUnilex.DEUXPTS) {
+            MESSAGE_ERREUR = "':' attendu avant le type de retour";
+            ERREUR();
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (!TYP()) {
+            MESSAGE_ERREUR = "type ENTIER attendu";
+            ERREUR();
+        }
+
+        if (AnalyseurLexical.UNILEX != TUnilex.PTVIRG) {
+            MESSAGE_ERREUR = "';' attendu apres l'entete de fonction";
+            ERREUR();
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        fct.nbParam = nbParam;
+        fct.adresse = CO;
+
+        if (!BLOC()) {
+            MESSAGE_ERREUR = "bloc de fonction incorrect";
+            ERREUR();
+        }
+
+        GEN(TCode.RETOUR);
+
+        fonctionCourante = ancienContexte;
+
+        if (AnalyseurLexical.UNILEX != TUnilex.PTVIRG) {
+            MESSAGE_ERREUR = "';' attendu apres la fonction";
+            ERREUR();
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+        return true;
+    }
+
+    public static boolean TYP() {
+        System.out.println("TYP");
+
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("ENTIER")) {
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+            return true;
         }
 
         return false;
@@ -204,6 +358,22 @@ public class AnalyseurSyntaxique {
 
         System.out.println("INSTRUCTION");
 
+        if (INST_COND()) {
+            return true;
+        }
+
+        if (INST_NON_COND()) {
+            return true;
+        }
+
+        MESSAGE_ERREUR = "INSTRUCTION: erreur de syntaxe";
+        ERREUR();
+        return false;
+    }
+
+    public static boolean INST_NON_COND() {
+        System.out.println("INST_NON_COND");
+
         if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
             return AFFECTATION();
         }
@@ -223,9 +393,106 @@ public class AnalyseurSyntaxique {
             return BLOC();
         }
 
-        MESSAGE_ERREUR = "INSTRUCTION: erreur de syntaxe";
-        ERREUR();
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("TANTQUE")) {
+            return INST_REPE();
+        }
+
         return false;
+    }
+
+    public static boolean INST_COND() {
+        System.out.println("INST_COND");
+
+        if (!(AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("SI"))) {
+            return false;
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (!EXP()) {
+            MESSAGE_ERREUR = "expression attendue apres SI";
+            ERREUR();
+        }
+
+        if (!(AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("ALORS"))) {
+            MESSAGE_ERREUR = "ALORS attendu";
+            ERREUR();
+        }
+
+        GEN(TCode.ALSN, 0);
+        empiler(CO - 1);
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (!INSTRUCTION()) {
+            MESSAGE_ERREUR = "instruction attendue apres ALORS";
+            ERREUR();
+        }
+
+        if (AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("SINON")) {
+
+            PCODE[depiler()] = CO + 2;
+            GEN(TCode.ALLE, 0);
+            empiler(CO - 1);
+
+            AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+            if (!INSTRUCTION()) {
+                MESSAGE_ERREUR = "instruction attendue apres SINON";
+                ERREUR();
+            }
+
+            PCODE[depiler()] = CO;
+        } else {
+            PCODE[depiler()] = CO;
+        }
+
+        return true;
+    }
+
+    public static boolean INST_REPE() {
+        System.out.println("INST_REPE");
+
+        if (!(AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("TANTQUE"))) {
+            return false;
+        }
+
+        empiler(CO);
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (!EXP()) {
+            MESSAGE_ERREUR = "expression attendue apres TANTQUE";
+            ERREUR();
+        }
+
+        if (!(AnalyseurLexical.UNILEX == TUnilex.MOTCLE
+                && AnalyseurLexical.CHAINE.equals("FAIRE"))) {
+            MESSAGE_ERREUR = "FAIRE attendu";
+            ERREUR();
+        }
+
+        GEN(TCode.ALSN, 0);
+        empiler(CO - 1);
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        if (!INSTRUCTION()) {
+            MESSAGE_ERREUR = "instruction attendue apres FAIRE";
+            ERREUR();
+        }
+
+        int adrAlsn = depiler();
+        int debutBoucle = depiler();
+        PCODE[adrAlsn] = CO + 2;
+        GEN(TCode.ALLE, debutBoucle);
+
+        return true;
     }
 
     public static boolean AFFECTATION() {
@@ -234,21 +501,26 @@ public class AnalyseurSyntaxique {
         if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
             String nom = AnalyseurLexical.CHAINE;
+            Integer deplacement = deplacementLocal(nom);
 
-            int index = tableIdent.chercher(nom);
-            if (index == -1) {
-                MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
-                ERREUR();
+            if (deplacement != null) {
+                GEN(TCode.EMPI, encoderAdresseRelative(deplacement));
+            } else {
+                int index = tableIdent.chercher(nom);
+                if (index == -1) {
+                    MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
+                    ERREUR();
+                }
+
+                Identificateur id = tableIdent.get(index);
+
+                if (id.getGenre() != GenreIdent.VARIABLE) {
+                    MESSAGE_ERREUR = "Erreur semantique : affectation sur constante ou fonction";
+                    ERREUR();
+                }
+
+                GEN(TCode.EMPI, id.adresse);
             }
-
-            Identificateur id = tableIdent.get(index);
-
-            if (id.getGenre() != GenreIdent.VARIABLE) {
-                MESSAGE_ERREUR = "Erreur semantique : affectation sur constante";
-                ERREUR();
-            }
-
-            GEN(TCode.EMPI, id.adresse);
 
             AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
 
@@ -286,20 +558,25 @@ public class AnalyseurSyntaxique {
                 if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
                     String nom = AnalyseurLexical.CHAINE;
+                    Integer deplacement = deplacementLocal(nom);
 
-                    int index = tableIdent.chercher(nom);
-                    if (index == -1) {
-                        MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
-                        ERREUR();
+                    if (deplacement != null) {
+                        GEN(TCode.EMPI, encoderAdresseRelative(deplacement));
+                    } else {
+                        int index = tableIdent.chercher(nom);
+                        if (index == -1) {
+                            MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
+                            ERREUR();
+                        }
+
+                        Identificateur id = tableIdent.get(index);
+                        if (id.getGenre() != GenreIdent.VARIABLE) {
+                            MESSAGE_ERREUR = "Erreur semantique : lecture sur constante ou fonction";
+                            ERREUR();
+                        }
+
+                        GEN(TCode.EMPI, id.adresse);
                     }
-
-                    Identificateur id = tableIdent.get(index);
-                    if (id.getGenre() != GenreIdent.VARIABLE) {
-                        MESSAGE_ERREUR = "Erreur semantique : lecture sur constante";
-                        ERREUR();
-                    }
-
-                    GEN(TCode.EMPI, id.adresse);
                     GEN(TCode.LIRE);
 
                     AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
@@ -311,20 +588,25 @@ public class AnalyseurSyntaxique {
                         if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
                             nom = AnalyseurLexical.CHAINE;
+                            deplacement = deplacementLocal(nom);
 
-                            index = tableIdent.chercher(nom);
-                            if (index == -1) {
-                                MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
-                                ERREUR();
+                            if (deplacement != null) {
+                                GEN(TCode.EMPI, encoderAdresseRelative(deplacement));
+                            } else {
+                                int index = tableIdent.chercher(nom);
+                                if (index == -1) {
+                                    MESSAGE_ERREUR = "Erreur semantique : variable non declaree";
+                                    ERREUR();
+                                }
+
+                                Identificateur id = tableIdent.get(index);
+                                if (id.getGenre() != GenreIdent.VARIABLE) {
+                                    MESSAGE_ERREUR = "Erreur semantique : lecture sur constante ou fonction";
+                                    ERREUR();
+                                }
+
+                                GEN(TCode.EMPI, id.adresse);
                             }
-
-                            id = tableIdent.get(index);
-                            if (id.getGenre() != GenreIdent.VARIABLE) {
-                                MESSAGE_ERREUR = "Erreur semantique : lecture sur constante";
-                                ERREUR();
-                            }
-
-                            GEN(TCode.EMPI, id.adresse);
                             GEN(TCode.LIRE);
 
                             AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
@@ -356,6 +638,12 @@ public class AnalyseurSyntaxique {
             if (AnalyseurLexical.UNILEX == TUnilex.PAROUV) {
 
                 AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+                if (AnalyseurLexical.UNILEX == TUnilex.PARFER) {
+                    GEN(TCode.ECRL);
+                    AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+                    return true;
+                }
 
                 if (ECR_EXP()) {
 
@@ -465,28 +753,13 @@ public class AnalyseurSyntaxique {
         if (AnalyseurLexical.UNILEX == TUnilex.IDENT) {
 
             String nom = AnalyseurLexical.CHAINE;
-
-            int index = tableIdent.chercher(nom);
-            if (index == -1) {
-                MESSAGE_ERREUR = "identificateur non declare";
-                ERREUR();
-            }
-
-            Identificateur id = tableIdent.get(index);
-
-            if (id.typc != 0) {
-                MESSAGE_ERREUR = "type incorrect dans expression arithmetique";
-                ERREUR();
-            }
-
-            if (id.getGenre() == GenreIdent.CONSTANTE) {
-                GEN(TCode.EMPI, id.val);
-            } else {
-                GEN(TCode.EMPI, id.adresse);
-                GEN(TCode.CONT);
-            }
-
             AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+            if (AnalyseurLexical.UNILEX == TUnilex.PAROUV) {
+                return APP_FCT(nom);
+            }
+
+            chargerIdentifiant(nom);
             return true;
         }
 
@@ -520,6 +793,59 @@ public class AnalyseurSyntaxique {
         return false;
     }
 
+    public static boolean APP_FCT(String nomFonction) {
+        System.out.println("APP_FCT");
+
+        int index = tableIdent.chercher(nomFonction);
+        if (index == -1) {
+            MESSAGE_ERREUR = "fonction non declaree";
+            ERREUR();
+        }
+
+        Identificateur id = tableIdent.get(index);
+        if (id.getGenre() != GenreIdent.FONCTION) {
+            MESSAGE_ERREUR = "appel sur un identificateur qui n'est pas une fonction";
+            ERREUR();
+        }
+
+        GEN(TCode.EMPI, 0);
+        GEN(TCode.SAVEBP);
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+
+        int nbArgs = 0;
+        if (AnalyseurLexical.UNILEX != TUnilex.PARFER) {
+            if (!EXP()) {
+                MESSAGE_ERREUR = "expression attendue dans l'appel de fonction";
+                ERREUR();
+            }
+            nbArgs++;
+
+            while (AnalyseurLexical.UNILEX == TUnilex.VIRG) {
+                AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+                if (!EXP()) {
+                    MESSAGE_ERREUR = "expression attendue apres ','";
+                    ERREUR();
+                }
+                nbArgs++;
+            }
+        }
+
+        if (AnalyseurLexical.UNILEX != TUnilex.PARFER) {
+            MESSAGE_ERREUR = "')' attendu dans l'appel de fonction";
+            ERREUR();
+        }
+
+        if (nbArgs != id.nbParam) {
+            MESSAGE_ERREUR = "nombre de parametres incorrect dans l'appel de fonction";
+            ERREUR();
+        }
+
+        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+        GEN(TCode.APPEL, id.adresse);
+        return true;
+    }
+
     public static boolean OP_BIN() {
         System.out.println("OP_BIN");
 
@@ -537,7 +863,7 @@ public class AnalyseurSyntaxique {
 
     public static void ANASYNT() {
 
-        AnalyseurLexical.UNILEX = AnalyseurLexical.ANALEX();
+        initialiser();
 
         if (PROG()) {
 
@@ -602,6 +928,61 @@ public class AnalyseurSyntaxique {
         return true;
     }
 
+    public static Integer deplacementLocal(String nom) {
+        if (fonctionCourante == null) {
+            return null;
+        }
+        return fonctionCourante.deplacements.get(nom);
+    }
+
+    public static int encoderAdresseRelative(int deplacement) {
+        return -BASE_ADRESSE_RELATIVE - deplacement;
+    }
+
+    public static boolean estAdresseRelative(int adresse) {
+        return adresse <= -BASE_ADRESSE_RELATIVE + 2;
+    }
+
+    public static int decoderAdresseRelative(int adresse) {
+        return -BASE_ADRESSE_RELATIVE - adresse;
+    }
+
+    public static void chargerIdentifiant(String nom) {
+        Integer deplacement = deplacementLocal(nom);
+
+        if (deplacement != null) {
+            GEN(TCode.LIBP, deplacement);
+            return;
+        }
+
+        int index = tableIdent.chercher(nom);
+        if (index == -1) {
+            MESSAGE_ERREUR = "identificateur non declare";
+            ERREUR();
+        }
+
+        Identificateur id = tableIdent.get(index);
+
+        if (id.typc != 0) {
+            MESSAGE_ERREUR = "type incorrect dans expression arithmetique";
+            ERREUR();
+        }
+
+        if (id.getGenre() == GenreIdent.CONSTANTE) {
+            GEN(TCode.EMPI, id.val);
+            return;
+        }
+
+        if (id.getGenre() == GenreIdent.VARIABLE) {
+            GEN(TCode.EMPI, id.adresse);
+            GEN(TCode.CONT);
+            return;
+        }
+
+        MESSAGE_ERREUR = "une fonction doit etre appelee avec des parentheses";
+        ERREUR();
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////
@@ -613,6 +994,14 @@ public class AnalyseurSyntaxique {
     public static void GEN(int instruction, int valeur) {
         PCODE[CO++] = instruction;
         PCODE[CO++] = valeur;
+    }
+
+    public static void empiler(int valeur) {
+        PILOP[++SOM_PILOP] = valeur;
+    }
+
+    public static int depiler() {
+        return PILOP[SOM_PILOP--];
     }
 
     public static String nomInstruction(int code) {
@@ -645,6 +1034,22 @@ public class AnalyseurSyntaxique {
                 return "CONT";
             case TCode.STOP:
                 return "STOP";
+            case TCode.ALLE:
+                return "ALLE";
+            case TCode.ALSN:
+                return "ALSN";
+            case TCode.APPEL:
+                return "APPEL";
+            case TCode.RETOUR:
+                return "RETOUR";
+            case TCode.SAVEBP:
+                return "SAVEBP";
+            case TCode.RSTRBP:
+                return "RSTRBP";
+            case TCode.DUPL:
+                return "DUPL";
+            case TCode.LIBP:
+                return "LIBP";
             default:
                 return "UNKNOWN";
         }
@@ -672,7 +1077,8 @@ public class AnalyseurSyntaxique {
         int instruction = PCODE[debut];
         StringBuilder sb = new StringBuilder(nomInstruction(instruction));
 
-        if (instruction == TCode.EMPI) {
+        if (instruction == TCode.EMPI || instruction == TCode.ALLE || instruction == TCode.ALSN
+                || instruction == TCode.APPEL || instruction == TCode.LIBP) {
             sb.append(" ").append(PCODE[debut + 1]);
             return sb.toString();
         }
@@ -687,7 +1093,8 @@ public class AnalyseurSyntaxique {
     public static int instructionSuivante(int debut) {
         int instruction = PCODE[debut];
 
-        if (instruction == TCode.EMPI) {
+        if (instruction == TCode.EMPI || instruction == TCode.ALLE || instruction == TCode.ALSN
+                || instruction == TCode.APPEL || instruction == TCode.LIBP) {
             return debut + 2;
         }
 
@@ -750,7 +1157,13 @@ public class AnalyseurSyntaxique {
         int SOM_PILEX = -1;
         int[] PILEX = new int[1000];
         int[] MEMVAR = new int[100];
-
+        int BP = 0;
+        int[] pileRetourSlot = new int[100];
+        int[] pileSommetAppelant = new int[100];
+        int[] pileBPAppelant = new int[100];
+        int SOM_APPEL = -1;
+        int[] pileSauveBP = new int[100];
+        int SOM_SAUVEBP = -1;
         while (PCODE[CO] != TCode.STOP) {
 
             switch (PCODE[CO]) {
@@ -785,20 +1198,30 @@ public class AnalyseurSyntaxique {
                     break;
 
                 case TCode.AFFE:
-                    MEMVAR[PILEX[SOM_PILEX - 1]] = PILEX[SOM_PILEX];
+                    if (estAdresseRelative(PILEX[SOM_PILEX - 1])) {
+                        int deplacement = decoderAdresseRelative(PILEX[SOM_PILEX - 1]);
+                        PILEX[BP + deplacement] = PILEX[SOM_PILEX];
+                    } else {
+                        MEMVAR[PILEX[SOM_PILEX - 1]] = PILEX[SOM_PILEX];
+                    }
                     SOM_PILEX = SOM_PILEX - 2;
                     CO = CO + 1;
                     break;
 
                 case TCode.LIRE:
                     java.util.Scanner sc = new java.util.Scanner(System.in);
-                    MEMVAR[PILEX[SOM_PILEX]] = sc.nextInt();
+                    if (estAdresseRelative(PILEX[SOM_PILEX])) {
+                        int deplacement = decoderAdresseRelative(PILEX[SOM_PILEX]);
+                        PILEX[BP + deplacement] = sc.nextInt();
+                    } else {
+                        MEMVAR[PILEX[SOM_PILEX]] = sc.nextInt();
+                    }
                     SOM_PILEX = SOM_PILEX - 1;
                     CO = CO + 1;
                     break;
 
                 case TCode.ECRE:
-                    System.out.println(PILEX[SOM_PILEX]);
+                    System.out.print(PILEX[SOM_PILEX]);
                     SOM_PILEX = SOM_PILEX - 1;
                     CO = CO + 1;
                     break;
@@ -824,8 +1247,74 @@ public class AnalyseurSyntaxique {
                     break;
 
                 case TCode.CONT:
-                    PILEX[SOM_PILEX] = MEMVAR[PILEX[SOM_PILEX]];
+                    if (estAdresseRelative(PILEX[SOM_PILEX])) {
+                        int deplacement = decoderAdresseRelative(PILEX[SOM_PILEX]);
+                        PILEX[SOM_PILEX] = PILEX[BP + deplacement];
+                    } else {
+                        PILEX[SOM_PILEX] = MEMVAR[PILEX[SOM_PILEX]];
+                    }
                     CO = CO + 1;
+                    break;
+
+                case TCode.ALLE:
+                    CO = PCODE[CO + 1];
+                    break;
+
+                case TCode.ALSN:
+                    if (PILEX[SOM_PILEX] == 0) {
+                        CO = PCODE[CO + 1];
+                    } else {
+                        CO = CO + 2;
+                    }
+                    SOM_PILEX = SOM_PILEX - 1;
+                    break;
+
+                case TCode.SAVEBP:
+                    SOM_PILEX = SOM_PILEX + 1;
+                    PILEX[SOM_PILEX] = BP;
+                    SOM_SAUVEBP = SOM_SAUVEBP + 1;
+                    pileSauveBP[SOM_SAUVEBP] = SOM_PILEX;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.RSTRBP:
+                    BP = PILEX[SOM_PILEX];
+                    SOM_PILEX = SOM_PILEX - 1;
+                    CO = CO + 1;
+                    break;
+
+                case TCode.DUPL:
+                    SOM_PILEX = SOM_PILEX + 1;
+                    PILEX[SOM_PILEX] = PILEX[SOM_PILEX - 1];
+                    CO = CO + 1;
+                    break;
+
+                case TCode.LIBP:
+                    SOM_PILEX = SOM_PILEX + 1;
+                    PILEX[SOM_PILEX] = PILEX[BP + PCODE[CO + 1]];
+                    CO = CO + 2;
+                    break;
+
+                case TCode.APPEL:
+                    int indexSauveBP = pileSauveBP[SOM_SAUVEBP];
+                    SOM_SAUVEBP = SOM_SAUVEBP - 1;
+                    SOM_APPEL = SOM_APPEL + 1;
+                    pileRetourSlot[SOM_APPEL] = indexSauveBP - 1;
+                    pileSommetAppelant[SOM_APPEL] = indexSauveBP - 2;
+                    pileBPAppelant[SOM_APPEL] = PILEX[indexSauveBP];
+                    SOM_PILEX = SOM_PILEX + 1;
+                    PILEX[SOM_PILEX] = CO + 2;
+                    BP = indexSauveBP + 1;
+                    CO = PCODE[CO + 1];
+                    break;
+
+                case TCode.RETOUR:
+                    int adresseRetour = PILEX[SOM_PILEX];
+                    SOM_PILEX = pileSommetAppelant[SOM_APPEL];
+                    PILEX[++SOM_PILEX] = PILEX[pileRetourSlot[SOM_APPEL]];
+                    BP = pileBPAppelant[SOM_APPEL];
+                    SOM_APPEL = SOM_APPEL - 1;
+                    CO = adresseRetour;
                     break;
             }
         }
